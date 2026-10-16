@@ -1,0 +1,635 @@
+// Maison Rêve — studio data model
+// PostgreSQL. Sections: people, wardrobe, reservations, conversations, operations.
+//
+// Business rules encoded here and enforced in src/lib/*:
+//  • a booking may not overlap another booking for the same dress + size, buffer days included
+//  • returning a booking moves the dress to Cleaning until a staff member completes it
+//  • replying to an inquiry resolves it unless the staff member chooses otherwise
+//  • a booking past its return date without a return scan becomes Late automatically
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────── people
+
+enum StaffRole {
+  OWNER
+  STUDIO_MANAGER
+  STYLIST
+  FULFILLMENT
+}
+
+model StaffUser {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  passwordHash     String
+  role             StaffRole @default(STYLIST)
+  title            String
+  phone            String?
+  accentTone       String    @default("rose")
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  lastActiveAt     DateTime?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+
+  replies            Reply[]
+  auditEntries       AuditLog[]
+  bookingEvents      BookingEvent[]
+  cleaningRecords    CleaningRecord[]
+  conditionLogs      ConditionLog[]
+  customerNotes      CustomerNote[]
+  dressBlocks        DressBlock[]
+  assignedInquiries  Inquiry[]    @relation("InquiryAssignee")
+  resolvedInquiries  Inquiry[]    @relation("InquiryResolver")
+
+  @@index([role])
+}
+
+enum CustomerTier {
+  GUEST
+  MEMBER
+  PARIS_CLUB
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  name           String
+  email          String       @unique
+  phone          String?
+  tier           CustomerTier @default(MEMBER)
+  passwordHash   String?
+  lifetimeSpend  Int          @default(0) // cents
+  rentalsCount   Int          @default(0)
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?      @default("United States")
+  memberSince    DateTime     @default(now())
+  creditBalance  Int          @default(0) // cents, membership credits
+  marketingOptIn Boolean      @default(false)
+  notes          String?
+  lastActiveAt   DateTime?
+  createdAt      DateTime     @default(now())
+
+  measurements Measurement?
+  bookings     Booking[]
+  inquiries    Inquiry[]
+  payments     Payment[]
+  favorites    Favorite[]
+  eventLists   EventList[]
+  notesLog     CustomerNote[]
+
+  @@index([tier])
+  @@index([name])
+}
+
+model Measurement {
+  id             String   @id @default(cuid())
+  customerId     String   @unique
+  heightCm       Int?
+  bustCm         Int?
+  waistCm        Int?
+  hipsCm         Int?
+  dressSizeLabel String?
+  backupSize     String?
+  shoeSize       String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  staffId    String?
+  body       String
+  createdAt  DateTime @default(now())
+
+  customer Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  staff    StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────── wardrobe
+
+enum DressStatus {
+  AVAILABLE
+  RENTED
+  CLEANING
+  RETIRED
+}
+
+model Dress {
+  id             String      @id @default(cuid())
+  slug           String      @unique
+  name           String
+  designer       String
+  category       String // Gown · Midi · Maxi · Mini · Two-piece
+  occasion       String // Wedding guest · Gala · Bridal shower · Black tie …
+  color          String
+  colorHex       String
+  length         String
+  neckline       String
+  sleeve         String
+  fabric         String
+  retailValue    Int // cents
+  rentalPrice4   Int // cents, 4-day rental
+  rentalPrice8   Int // cents, 8-day rental
+  deposit        Int // cents, refundable damage deposit
+  status         DressStatus @default(AVAILABLE)
+  timesRented    Int         @default(0)
+  careNotes      String
+  fitNotes       String
+  story          String
+  artTone        String // palette key for the rendered garment art
+  featured       Boolean     @default(false)
+  isNewArrival   Boolean     @default(false)
+  retiredAt      DateTime?
+  createdAt      DateTime    @default(now())
+
+  sizes          DressSize[]
+  images         DressImage[]
+  bookings       Booking[]
+  blocks         DressBlock[]
+  cleaningRecords CleaningRecord[]
+  conditionLogs  ConditionLog[]
+  favorites      Favorite[]
+  eventListItems EventListItem[]
+  accessories    Accessory[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model DressSize {
+  id       String @id @default(cuid())
+  dressId  String
+  size     String // XS · S · M · L · XL · XXL
+  quantity Int    @default(1)
+  position Int    @default(0)
+
+  dress Dress @relation(fields: [dressId], references: [id], onDelete: Cascade)
+
+  @@unique([dressId, size])
+}
+
+enum ImageKind {
+  FRONT
+  BACK
+  DETAIL
+  ON_BODY
+  MOVEMENT
+}
+
+model DressImage {
+  id       String    @id @default(cuid())
+  dressId  String
+  kind     ImageKind
+  alt      String
+  caption  String?
+  position Int       @default(0)
+
+  dress Dress @relation(fields: [dressId], references: [id], onDelete: Cascade)
+
+  @@index([dressId, position])
+}
+
+model DressBlock {
+  id        String   @id @default(cuid())
+  dressId   String
+  size      String? // null blocks every size
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  staffId   String?
+  createdAt DateTime @default(now())
+
+  dress Dress      @relation(fields: [dressId], references: [id], onDelete: Cascade)
+  staff StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([dressId, startDate, endDate])
+}
+
+model CleaningRecord {
+  id          String    @id @default(cuid())
+  dressId     String
+  bookingId   String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  method      String    @default("Specialist dry clean")
+  note        String?
+  staffId     String?
+
+  dress   Dress      @relation(fields: [dressId], references: [id], onDelete: Cascade)
+  booking Booking?   @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  staff   StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([dressId, startedAt])
+}
+
+enum ConditionSeverity {
+  NOTE
+  MINOR
+  MAJOR
+}
+
+model ConditionLog {
+  id        String            @id @default(cuid())
+  dressId   String
+  bookingId String?
+  severity  ConditionSeverity @default(NOTE)
+  summary   String
+  detail    String?
+  resolved  Boolean           @default(false)
+  staffId   String?
+  loggedAt  DateTime          @default(now())
+
+  dress   Dress      @relation(fields: [dressId], references: [id], onDelete: Cascade)
+  booking Booking?   @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  staff   StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([dressId, loggedAt])
+}
+
+// ─────────────────────────────────────────────────────────── reservations
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  WITH_CUSTOMER
+  LATE
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  AUTHORIZED
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum DepositStatus {
+  NONE
+  HELD
+  REFUNDED
+  FORFEITED
+}
+
+enum PaymentKind {
+  RENTAL
+  DEPOSIT
+  ADD_ON
+  INSURANCE
+  LATE_FEE
+  REFUND
+}
+
+enum PaymentProvider {
+  STRIPE
+  STUDIO
+}
+
+enum PaymentMethod {
+  CARD
+  APPLE_PAY
+  GOOGLE_PAY
+  BNPL
+  STUDIO_CREDIT
+}
+
+model Booking {
+  id           String        @id // MR-2841
+  customerId   String
+  dressId      String
+  size         String
+  backupSize   String?
+  eventType    String
+  eventDate    DateTime      @db.Date
+  deliveryDate DateTime      @db.Date
+  returnDate   DateTime      @db.Date
+  rentalDays   Int           @default(4)
+  bufferDays   Int           @default(1)
+  status       BookingStatus @default(PENDING)
+
+  subtotal     Int           @default(0)
+  addOnTotal   Int           @default(0)
+  insuranceFee Int           @default(0)
+  lateFee      Int           @default(0)
+  total        Int           @default(0)
+  deposit      Int           @default(0)
+  paymentStatus PaymentStatus @default(UNPAID)
+  depositStatus DepositStatus @default(NONE)
+
+  paymentRef    String?
+  paymentMethod PaymentMethod?
+  trackingNumber String?
+  courier       String?
+  shippedAt     DateTime?
+  deliveredAt   DateTime?
+  returnScannedAt DateTime?
+  lateNotifiedAt DateTime?
+  cancelledAt   DateTime?
+  refundAmount  Int           @default(0)
+  cleaningCompleteAt DateTime?
+
+  shipName     String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  region       String
+  postalCode   String
+  country      String        @default("United States")
+
+  notes        String? // shared with the customer
+  internalNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  dress          Dress           @relation(fields: [dressId], references: [id])
+  events         BookingEvent[]
+  addOns         BookingAddOn[]
+  payments       Payment[]
+  cleaningRecords CleaningRecord[]
+  conditionLogs  ConditionLog[]
+  inquiries      Inquiry[]
+
+  @@index([status])
+  @@index([dressId, size, deliveryDate, returnDate])
+  @@index([returnDate])
+  @@index([customerId])
+}
+
+enum BookingEventType {
+  CREATED
+  STATUS_CHANGE
+  NOTE
+  EXTENSION
+  PAYMENT
+  REFUND
+  CLEANING
+  TICKET
+}
+
+model BookingEvent {
+  id        String           @id @default(cuid())
+  bookingId String
+  type      BookingEventType
+  fromValue String?
+  toValue   String?
+  summary   String
+  detail    String?
+  staffId   String?
+  visibleToCustomer Boolean  @default(false)
+  occurredAt DateTime        @default(now())
+
+  booking Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  staff   StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId, occurredAt])
+}
+
+enum AddOnCategory {
+  ACCESSORY
+  FIT
+  COVERAGE
+  DELIVERY
+}
+
+model Accessory {
+  id          String       @id @default(cuid())
+  name        String
+  category    AddOnCategory @default(ACCESSORY)
+  description String
+  price       Int // cents
+  dressId     String?
+  active      Boolean      @default(true)
+
+  dress    Dress?       @relation(fields: [dressId], references: [id], onDelete: SetNull)
+  bookings BookingAddOn[]
+
+  @@index([category])
+}
+
+model BookingAddOn {
+  id          String @id @default(cuid())
+  bookingId   String
+  accessoryId String?
+  label       String
+  amount      Int
+  quantity    Int    @default(1)
+
+  booking   Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  accessory Accessory? @relation(fields: [accessoryId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+}
+
+model Payment {
+  id         String          @id @default(cuid())
+  bookingId  String?
+  customerId String
+  kind       PaymentKind
+  amount     Int // cents, negative for refunds
+  status     PaymentStatus
+  provider   PaymentProvider @default(STUDIO)
+  method     PaymentMethod   @default(CARD)
+  providerRef String?
+  cardLast4  String?
+  capturedAt DateTime?
+  refundedAt DateTime?
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  booking  Booking?  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([customerId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────── conversations
+
+enum InquiryStatus {
+  OPEN
+  RESOLVED
+}
+
+enum InquiryTopic {
+  SIZING
+  BOOKING_CHANGE
+  GROUP_BOOKING
+  DELIVERY
+  DAMAGE
+  GENERAL
+}
+
+enum InquiryChannel {
+  CONTACT_FORM
+  DRESS_PAGE
+  EMAIL
+  PHONE
+}
+
+model Inquiry {
+  id            String         @id @default("INQ-0000")
+  customerId    String?
+  guestName     String
+  guestEmail    String
+  guestPhone    String?
+  subject       String
+  topic         InquiryTopic
+  channel       InquiryChannel @default(CONTACT_FORM)
+  message       String
+  status        InquiryStatus  @default(OPEN)
+  assignedToId  String?
+  resolvedById  String?
+  bookingId     String?
+  firstReplyAt  DateTime?
+  resolvedAt    DateTime?
+  receivedAt    DateTime       @default(now())
+
+  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedTo StaffUser?  @relation("InquiryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  resolvedBy StaffUser?  @relation("InquiryResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  booking    Booking?    @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  replies    Reply[]
+  repliesCount Int       @default(0)
+
+  @@index([status, receivedAt])
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  inquiryId String
+  staffId   String?
+  body      String
+  internal  Boolean  @default(false)
+  channel   String   @default("email")
+  sentAt    DateTime @default(now())
+
+  inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  staff   StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, sentAt])
+}
+
+// ─────────────────────────────────────────────────────────── operations
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  staffId   String?
+  actorLabel String
+  action    String // booking.status_changed · inquiry.replied · inventory.cleaning_complete …
+  entity    String // Booking · Inquiry · Dress · Customer · StaffUser
+  entityId  String
+  summary   String
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  staff StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId, timestamp])
+  @@index([timestamp])
+}
+
+model StudioSettings {
+  id                    String @id @default("studio")
+  rentalPeriods         Int[]  @default([4, 8])
+  bufferDays            Int    @default(1)
+  prepDays              Int    @default(1)
+  lateFeePerDay         Int    @default(2500)
+  lateGraceDays         Int    @default(1)
+  depositPercent        Int    @default(20)
+  insuranceFee          Int    @default(1500)
+  cancellationWindowDays Int   @default(7)
+  cleaningTurnaroundHours Int  @default(48)
+  businessHours         Json
+  deliveryZones         Json
+  studioEmail           String @default("studio@maisonreve.com")
+  studioPhone           String @default("(617) 555-0148")
+  studioAddress         String @default("418 Newbury Street, Floor 3, Boston, MA 02115")
+  replyTargetHours      Int    @default(2)
+  updatedAt             DateTime @updatedAt
+}
+
+enum TemplateChannel {
+  EMAIL
+  SMS
+}
+
+model NotificationTemplate {
+  id        String          @id // confirmation · shipped · return_reminder · returned · inquiry_reply
+  name      String
+  channel   TemplateChannel @default(EMAIL)
+  subject   String
+  body      String
+  active    Boolean         @default(true)
+  updatedAt DateTime        @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────── storefront
+
+model Favorite {
+  id         String   @id @default(cuid())
+  customerId String
+  dressId    String
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  dress    Dress    @relation(fields: [dressId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, dressId])
+}
+
+model EventList {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  eventDate  DateTime? @db.Date
+  occasion   String?
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    EventListItem[]
+
+  @@index([customerId])
+}
+
+model EventListItem {
+  id          String @id @default(cuid())
+  eventListId String
+  dressId     String
+  size        String?
+  note        String?
+
+  eventList EventList @relation(fields: [eventListId], references: [id], onDelete: Cascade)
+  dress     Dress     @relation(fields: [dressId], references: [id], onDelete: Cascade)
+
+  @@unique([eventListId, dressId])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String   @default("home")
+  createdAt DateTime @default(now())
+}

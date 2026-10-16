@@ -1,0 +1,57 @@
+{
+  "name": "maison-reve",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Maison Rêve — dress rental storefront and private studio admin",
+  "scripts": {
+    "dev": "next dev",
+    "dev:all": "concurrently -n studio,web -c magenta,cyan \"npm run db:start\" \"next dev\"",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:start": "node scripts/pg-local.mjs",
+    "db:generate": "prisma generate",
+    "db:setup": "prisma migrate deploy && npm run db:seed",
+    "db:push": "prisma db push --skip-generate",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reseed": "node scripts/db-reset.mjs && npm run db:setup",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "6.19.3",
+    "@prisma/client": "6.19.3",
+    "bcryptjs": "3.0.3",
+    "clsx": "2.1.1",
+    "date-fns": "4.1.0",
+    "jose": "6.1.0",
+    "lucide-react": "0.548.0",
+    "next": "16.4.2",
+    "otplib": "12.0.1",
+    "pg": "8.16.3",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "stripe": "19.1.0",
+    "tailwind-merge": "3.3.1",
+    "zod": "4.1.11"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@electric-sql/pglite-socket": "0.2.13",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.7.0",
+    "@types/pg": "8.15.5",
+    "@types/qrcode": "1.5.5",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "concurrently": "9.2.1",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

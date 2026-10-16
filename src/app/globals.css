@@ -1,0 +1,260 @@
+@import 'tailwindcss';
+
+/*
+ * Maison Rêve design system
+ * ------------------------------------------------------------------
+ * The brand palette is fixed (ivory, blush, rose, champagne, mulberry,
+ * charcoal). Everything a surface actually paints with is a *semantic*
+ * token — page, surface, line, ink, accent — so the private studio can
+ * switch to its dark working theme without touching a single component.
+ *
+ * Dark mode is scoped: `[data-theme="dark"]` is set on the studio shell
+ * only, never on the storefront.
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ── fixed brand palette ─────────────────────────────────────────── */
+@theme {
+  --color-ivory: #fbf7f4;
+  --color-cream: #f6f0ec;
+  --color-blush: #f3e1e1;
+  --color-rose: #d8a7a7;
+  --color-gold: #c9a96e;
+  --color-mulberry: #7a3e4d;
+  --color-charcoal: #3b3536;
+  --color-taupe: #8a7e7a;
+
+  --font-sans: 'Lato', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Cormorant Garamond', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+
+  --shadow-soft: 0 1px 2px rgb(59 53 54 / 0.05), 0 12px 32px -20px rgb(59 53 54 / 0.28);
+  --shadow-lift: 0 2px 6px rgb(59 53 54 / 0.07), 0 24px 48px -28px rgb(59 53 54 / 0.38);
+}
+
+/* ── semantic tokens (utilities resolve to these at runtime) ─────── */
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-gold-ink: var(--gold-ink);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-line: var(--danger-line);
+}
+
+:root {
+  --page: #fbf7f4;
+  --surface: #ffffff;
+  --surface-muted: #f6f0ec;
+  --line: #eadcd6;
+  --line-strong: #dcc8c0;
+  --ink: #3b3536;
+  --ink-muted: #6f6360; /* 5.4:1 on ivory — AA for small text */
+  --accent: #7a3e4d;
+  --accent-hover: #683440;
+  --accent-ink: #fbf7f4; /* 8:1 on mulberry */
+  --gold-ink: #7e6330; /* champagne, darkened for text — AA */
+  --danger-ink: #99443f;
+  --danger-line: #e6c6c2;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --page: #221c1e;
+  --surface: #2b2427;
+  --surface-muted: #332b2e;
+  --line: #453a3e;
+  --line-strong: #55464b;
+  --ink: #f4edea;
+  --ink-muted: #bdb0ac; /* 7.9:1 on the dark page */
+  --accent: #8e4a5c;
+  --accent-hover: #a25868;
+  --accent-ink: #fdf6f7;
+  --gold-ink: #e3cc93;
+  --danger-ink: #e59b95;
+  --danger-line: #6b423f;
+
+  color-scheme: dark;
+}
+
+/* ── status tones ────────────────────────────────────────────────── */
+/* Any element with data-tone gets --tone-bg / --tone-line / --tone-ink;
+   chips (and the like) read them. Text values are tuned to pass AA on
+   their own background in both themes. */
+
+[data-tone='neutral'] {
+  --tone-bg: #f1ece9;
+  --tone-line: #e3d9d3;
+  --tone-ink: #5e5450;
+}
+[data-tone='gold'] {
+  --tone-bg: #f6eedd;
+  --tone-line: #e8d9b8;
+  --tone-ink: #7e6330;
+}
+[data-tone='rose'] {
+  --tone-bg: #f8e8e8;
+  --tone-line: #edd4d4;
+  --tone-ink: #8c4a57;
+}
+[data-tone='mulberry'] {
+  --tone-bg: #7a3e4d;
+  --tone-line: #7a3e4d;
+  --tone-ink: #fbf7f4;
+}
+[data-tone='clay'] {
+  --tone-bg: #f4e4dc;
+  --tone-line: #e7cdc0;
+  --tone-ink: #8a4b33;
+}
+[data-tone='sage'] {
+  --tone-bg: #e8eee5;
+  --tone-line: #d4e0cd;
+  --tone-ink: #4f6349;
+}
+[data-tone='blush'] {
+  --tone-bg: #f3e1e1;
+  --tone-line: #ebd5d5;
+  --tone-ink: #7a4a52;
+}
+
+[data-theme='dark'] [data-tone='neutral'] {
+  --tone-bg: #3a3235;
+  --tone-line: #4e4347;
+  --tone-ink: #d6cbc6;
+}
+[data-theme='dark'] [data-tone='gold'] {
+  --tone-bg: #40372a;
+  --tone-line: #5a4c36;
+  --tone-ink: #e3cc93;
+}
+[data-theme='dark'] [data-tone='rose'] {
+  --tone-bg: #452f35;
+  --tone-line: #5c3d45;
+  --tone-ink: #efc2c2;
+}
+[data-theme='dark'] [data-tone='mulberry'] {
+  --tone-bg: #8e4a5c;
+  --tone-line: #8e4a5c;
+  --tone-ink: #fdf6f7;
+}
+[data-theme='dark'] [data-tone='clay'] {
+  --tone-bg: #472e26;
+  --tone-line: #5f3f34;
+  --tone-ink: #edbfa8;
+}
+[data-theme='dark'] [data-tone='sage'] {
+  --tone-bg: #2f3a2c;
+  --tone-line: #435139;
+  --tone-ink: #c3d6bb;
+}
+[data-theme='dark'] [data-tone='blush'] {
+  --tone-bg: #3e3134;
+  --tone-line: #554246;
+  --tone-ink: #e3c6cb;
+}
+
+/* ── primitives ──────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 999px;
+  border: 1px solid var(--tone-line, var(--line));
+  background: var(--tone-bg, var(--surface-muted));
+  color: var(--tone-ink, var(--ink));
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.chip-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+
+/* thin champagne / blush hairline used to separate fine detail */
+.hairline {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-blush);
+    color: var(--color-charcoal);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+  }
+}
+
+/* ── printing ────────────────────────────────────────────────────── */
+
+/* The daily run sheet is the one screen that leaves the building. On paper it
+   becomes a plain document: chrome hidden, colours flattened, lists kept
+   whole. Elements marked data-print-hide never print. */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .print-sheet {
+    max-width: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #3b3536 !important;
+  }
+
+  .print-sheet .print-keep {
+    break-inside: avoid;
+  }
+
+  .print-sheet a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}
+

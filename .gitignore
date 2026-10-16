@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# next
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+
+# local embedded PostgreSQL data (dev only) — stored outside the project
+# tree in ~/.maison-reve/pg by scripts/pg-local.mjs
+
+# env
+.env
+.env.local
+
+# misc
+.DS_Store
+npm-debug.log*
