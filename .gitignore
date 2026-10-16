@@ -10,6 +10,9 @@ next-env.d.ts
 # local embedded PostgreSQL data (dev only) — stored outside the project
 # tree in ~/.maison-reve/pg by scripts/pg-local.mjs
 
+# local email outbox (dev) — written by the app when no email key is set
+var/
+
 # env
 .env
 .env.local

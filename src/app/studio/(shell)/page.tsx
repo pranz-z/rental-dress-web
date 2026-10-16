@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
 import { requireStaff } from '@/lib/auth/guards'
 import { markLateBookings } from '@/lib/bookings'
+import { sendReturnReminders } from '@/lib/notifications'
 import { STUDIO_TIMEZONE, diffDays, formatDay, formatWeekdayLong, relativeDayLabel, relativeFromNow, todayUtc } from '@/lib/dates'
 import { prisma } from '@/lib/db'
 import {
@@ -78,6 +79,8 @@ export default async function StudioOverviewPage({
 
   // Keep the ledger true: past-due rentals become Late before we count them.
   await markLateBookings(today)
+  // Two-day and one-day return reminders go out from the studio's own screen.
+  await sendReturnReminders(today)
 
   const snapshot = await overviewSnapshot(today)
 

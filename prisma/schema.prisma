@@ -36,6 +36,10 @@ model StaffUser {
   accentTone       String    @default("rose")
   twoFactorEnabled Boolean   @default(false)
   twoFactorSecret  String?
+  /** Set on invite / reset / production bootstrap: the next sign-in must pick a password. */
+  mustChangePassword Boolean @default(false)
+  /** Owner can require the second factor; sign-in forces enrollment while true. */
+  twoFactorRequired  Boolean @default(false)
   lastActiveAt     DateTime?
   active           Boolean   @default(true)
   createdAt        DateTime  @default(now())
@@ -88,6 +92,7 @@ model Customer {
   favorites    Favorite[]
   eventLists   EventList[]
   notesLog     CustomerNote[]
+  reviews      Review[]
 
   @@index([tier])
   @@index([name])
@@ -145,10 +150,7 @@ model Dress {
   neckline       String
   sleeve         String
   fabric         String
-  retailValue    Int // cents
-  rentalPrice4   Int // cents, 4-day rental
-  rentalPrice8   Int // cents, 8-day rental
-  deposit        Int // cents, refundable damage deposit
+  retailValue    Int // cents — rental prices and the deposit derive from this via StudioSettings percentages
   status         DressStatus @default(AVAILABLE)
   timesRented    Int         @default(0)
   careNotes      String
@@ -169,6 +171,7 @@ model Dress {
   favorites      Favorite[]
   eventListItems EventListItem[]
   accessories    Accessory[]
+  reviews        Review[]
 
   @@index([category])
   @@index([status])
@@ -553,13 +556,23 @@ model AuditLog {
 model StudioSettings {
   id                    String @id @default("studio")
   rentalPeriods         Int[]  @default([4, 8])
+  /// Rental price for the shorter period, as a percent of the dress retail value.
+  rentalPercent4        Int    @default(35)
+  /// Rental price for the longer period, as a percent of the dress retail value.
+  rentalPercent8        Int    @default(55)
   bufferDays            Int    @default(1)
   prepDays              Int    @default(1)
+  /// Flat fee per extra day when a studio extends a rental.
+  extensionFeePerDay    Int    @default(4500)
   lateFeePerDay         Int    @default(2500)
   lateGraceDays         Int    @default(1)
   depositPercent        Int    @default(20)
   insuranceFee          Int    @default(1500)
   cancellationWindowDays Int   @default(7)
+  /// Refund share, in percent of the rental total, when a booking is cancelled inside the window.
+  cancellationRefundPercent Int @default(50)
+  /// When true the storefront confirms paid, available bookings on the spot; default keeps them Pending for the studio.
+  autoConfirmBookings   Boolean @default(false)
   cleaningTurnaroundHours Int  @default(48)
   businessHours         Json
   deliveryZones         Json
@@ -632,4 +645,25 @@ model Subscriber {
   email     String   @unique
   source    String   @default("home")
   createdAt DateTime @default(now())
+}
+
+// A review a customer left after wearing a dress. Photo reviews are the
+// Phase 2 upgrade; names, occasions and dates are real so the dress page can
+// quote them with confidence.
+model Review {
+  id           String    @id @default(cuid())
+  dressId      String
+  customerId   String?
+  customerName String
+  rating       Int       @default(5)
+  title        String
+  body         String
+  occasion     String?
+  wornOn       DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+
+  dress    Dress     @relation(fields: [dressId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([dressId, createdAt])
 }

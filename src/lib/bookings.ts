@@ -18,6 +18,7 @@ import { formatMoney } from './money'
 import { findConflicts, occupancyWindow, rentalsReleased, type Occupancy } from './availability'
 import { BOOKING_STATUS_META } from './domain'
 import { recordAudit, staffActor } from './audit'
+import { sendBookingConfirmedEmail, sendBookingShippedEmail, sendReturnReceivedEmail } from './notifications'
 
 type Tx = Prisma.TransactionClient
 type Db = Tx | typeof prisma
@@ -37,11 +38,12 @@ export async function loadOccupancies(
   db: Db,
   dressId: string,
   prepDays: number,
+  bufferDays: number,
 ): Promise<Occupancy[]> {
   const [bookings, blocks] = await Promise.all([
     db.booking.findMany({
       where: { dressId },
-      select: { id: true, size: true, status: true, deliveryDate: true, returnDate: true, bufferDays: true },
+      select: { id: true, size: true, status: true, deliveryDate: true, returnDate: true },
     }),
     db.dressBlock.findMany({
       where: { dressId },
@@ -53,7 +55,7 @@ export async function loadOccupancies(
     ...bookings.map((booking) => ({
       kind: 'BOOKING' as const,
       start: addDays(booking.deliveryDate, -prepDays),
-      end: addDays(booking.returnDate, booking.bufferDays),
+      end: addDays(booking.returnDate, bufferDays),
       label: `booking ${booking.id}`,
       reference: booking.id,
       size: booking.size,
@@ -84,7 +86,7 @@ async function assertAvailable(
     excludeBookingId?: string
   },
 ): Promise<void> {
-  const occupancies = (await loadOccupancies(db, input.dressId, input.prepDays)).filter(
+  const occupancies = (await loadOccupancies(db, input.dressId, input.prepDays, input.bufferDays)).filter(
     (entry) => entry.reference !== input.excludeBookingId,
   )
   const request = occupancyWindow({
@@ -168,7 +170,7 @@ export async function confirmBooking(bookingId: string, staff: StaffUser): Promi
       size: booking.size,
       deliveryDate: booking.deliveryDate,
       returnDate: booking.returnDate,
-      bufferDays: booking.bufferDays,
+      bufferDays: settings.bufferDays,
       prepDays: settings.prepDays,
       excludeBookingId: booking.id,
     })
@@ -226,6 +228,9 @@ export async function confirmBooking(bookingId: string, staff: StaffUser): Promi
       summary: `Confirmed ${bookingId} — ${booking.dress.name} for ${booking.customer.name}`,
     })
   })
+
+  // The customer hears about it the moment the ledger settles.
+  await sendBookingConfirmedEmail(bookingId)
 }
 
 export async function shipBooking(
@@ -272,6 +277,8 @@ export async function shipBooking(
       metadata: { courier, trackingNumber: tracking },
     })
   })
+
+  await sendBookingShippedEmail(bookingId)
 }
 
 export async function deliverBooking(bookingId: string, staff: StaffUser): Promise<void> {
@@ -403,6 +410,8 @@ export async function returnBooking(
       summary: `Returned ${bookingId} — ${booking.dress.name} moved to cleaning${additionalLateFee > 0 ? `, ${formatMoney(additionalLateFee)} late fee applied` : ''}`,
     })
   })
+
+  await sendReturnReceivedEmail(bookingId)
 }
 
 export async function extendBooking(
@@ -437,13 +446,12 @@ export async function extendBooking(
       size: booking.size,
       deliveryDate: booking.deliveryDate,
       returnDate: newReturnDate,
-      bufferDays: booking.bufferDays,
+      bufferDays: settings.bufferDays,
       prepDays: settings.prepDays,
       excludeBookingId: booking.id,
     })
 
-    const dailyRate = Math.round(booking.subtotal / Math.max(booking.rentalDays, 1))
-    const extensionFee = dailyRate * extraDays
+    const extensionFee = settings.extensionFeePerDay * extraDays
     const subtotal = booking.subtotal + extensionFee
 
     // Overdue days already on the clock keep their fee even when extended.
@@ -567,7 +575,7 @@ export async function cancelBooking(
 
     let rentalRefund = 0
     if (booking.paymentStatus === 'PAID') {
-      rentalRefund = withinWindow ? rentalBase : Math.round(rentalBase * 0.5)
+      rentalRefund = withinWindow ? rentalBase : Math.round((rentalBase * settings.cancellationRefundPercent) / 100)
     }
     const depositRefund = booking.depositStatus === 'HELD' ? booking.deposit : 0
     const refundAmount = rentalRefund + depositRefund
@@ -585,7 +593,7 @@ export async function cancelBooking(
           refundedAt: now,
           note: withinWindow
             ? `Cancellation refund — full rental refunded (${settings.cancellationWindowDays}+ days’ notice)`
-            : `Cancellation refund — 50% per policy (inside the ${settings.cancellationWindowDays}-day window)`,
+            : `Cancellation refund — ${settings.cancellationRefundPercent}% per policy (inside the ${settings.cancellationWindowDays}-day window)`,
         },
       })
     }
@@ -625,7 +633,7 @@ export async function cancelBooking(
     })
 
     const refundSummary = rentalRefund > 0
-      ? `${withinWindow ? 'full refund' : '50% refund'} of ${formatMoney(rentalRefund)} issued`
+      ? `${withinWindow ? 'full refund' : `${settings.cancellationRefundPercent}% refund`} of ${formatMoney(rentalRefund)} issued`
       : booking.paymentStatus === 'AUTHORIZED'
         ? 'card authorization released, nothing captured'
         : 'no payment had been captured'
@@ -688,6 +696,63 @@ export async function addBookingNote(
       summary: `Added an internal note to ${bookingId}`,
     })
   })
+}
+
+// ── storefront automation ─────────────────────────────────────────────────
+
+/**
+ * Storefront setting: when the studio runs auto-confirm, a booking that is
+ * paid and available is confirmed the moment it settles — at checkout with the
+ * internal gateway, or when the processor's verified event lands. The default
+ * keeps every booking Pending for the studio to review.
+ */
+export async function autoConfirmBooking(bookingId: string): Promise<boolean> {
+  const confirmed = await prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: { dress: { select: { name: true } }, customer: { select: { name: true } } },
+    })
+    if (!booking) return false
+    if (booking.status !== 'PENDING') return false
+    if (booking.paymentStatus !== 'AUTHORIZED' && booking.paymentStatus !== 'PAID') return false
+
+    const now = new Date()
+    await tx.payment.updateMany({
+      where: { bookingId, status: 'AUTHORIZED' },
+      data: { status: 'PAID', capturedAt: now },
+    })
+    const updated = await tx.booking.updateMany({
+      where: { id: bookingId, status: 'PENDING' },
+      data: {
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        depositStatus: booking.deposit > 0 ? 'HELD' : 'NONE',
+      },
+    })
+    if (updated.count === 0) return false
+
+    await tx.bookingEvent.create({
+      data: {
+        bookingId,
+        type: 'STATUS_CHANGE',
+        fromValue: 'PENDING',
+        toValue: 'CONFIRMED',
+        summary: 'Booking confirmed automatically — payment captured and the dress is reserved.',
+        visibleToCustomer: true,
+      },
+    })
+    await recordAudit(tx, {
+      actorLabel: 'Storefront automation',
+      action: 'booking.auto_confirmed',
+      entity: 'Booking',
+      entityId: bookingId,
+      summary: `Auto-confirmed ${bookingId} — ${booking.dress.name} for ${booking.customer.name} (settings: confirm paid bookings automatically)`,
+    })
+    return true
+  })
+
+  if (confirmed) await sendBookingConfirmedEmail(bookingId)
+  return confirmed
 }
 
 // ── copy ──────────────────────────────────────────────────────────────────

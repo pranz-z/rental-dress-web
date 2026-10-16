@@ -100,6 +100,8 @@ export default async function BookingDetailPage({
 
   if (!booking) notFound()
 
+  const settings = await prisma.studioSettings.findUniqueOrThrow({ where: { id: 'studio' } })
+
   const statusMeta = BOOKING_STATUS_META[booking.status]
   const doneMessage = done ? (BOOKING_DONE_MESSAGES[done] ?? null) : null
   const caps = {
@@ -175,7 +177,7 @@ export default async function BookingDetailPage({
                   {formatDay(booking.deliveryDate)} → {formatDay(booking.returnDate)}
                 </p>
                 <p className="text-[13px] text-ink-muted">
-                  {booking.rentalDays}-day rental · {booking.bufferDays}-day cleaning buffer
+                  {booking.rentalDays}-day rental · {settings.bufferDays}-day cleaning buffer
                 </p>
               </DetailItem>
               <DetailItem label="Event">

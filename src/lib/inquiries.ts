@@ -6,9 +6,11 @@
  * transaction. Replies are recorded as sent by email; internal notes never
  * leave the studio.
  */
-import type { StaffUser } from '@prisma/client'
+import type { InquiryTopic, Prisma, StaffUser } from '@prisma/client'
 import { prisma } from './db'
 import { recordAudit, staffActor } from './audit'
+import { INQUIRY_TOPICS } from './domain'
+import { sendInquiryAcknowledgement, sendInquiryReply } from './notifications'
 
 export class InquiryError extends Error {}
 
@@ -57,6 +59,9 @@ export async function replyToInquiry(
         : `Replied to ${inquiry.guestName} — “${inquiry.subject}”`,
     })
   })
+
+  // The reply leaves the building as a real email; internal notes never do.
+  if (!input.internal) await sendInquiryReply(inquiryId, staff.name, body)
   return { internal: input.internal }
 }
 
@@ -143,6 +148,158 @@ export async function assignInquiry(
     return name
   })
   return assigneeName
+}
+
+// ── storefront entry points ───────────────────────────────────────────────
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export type CreateInquiryInput = {
+  guestName: string
+  guestEmail: string
+  guestPhone?: string
+  subject: string
+  topic: InquiryTopic
+  message: string
+  channel: 'CONTACT_FORM' | 'DRESS_PAGE'
+}
+
+/** Next in the INQ- series, matched to the ledger style the studio uses. */
+async function nextInquiryId(tx: Prisma.TransactionClient): Promise<string> {
+  const latest = await tx.inquiry.findMany({ orderBy: { receivedAt: 'desc' }, take: 40, select: { id: true } })
+  const max = latest.reduce((best, row) => {
+    const parsed = Number.parseInt(row.id.replace(/^INQ-/, ''), 10)
+    return Number.isFinite(parsed) && parsed > best ? parsed : best
+  }, 1100)
+  return `INQ-${max + 1}`
+}
+
+/**
+ * A public inquiry — from the contact page or a dress page. Matched to the
+ * customer book by email, or a guest profile is opened so the studio still has
+ * someone to answer and follow up with.
+ */
+export async function createInquiry(input: CreateInquiryInput): Promise<{ id: string }> {
+  const guestName = input.guestName.trim()
+  const guestEmail = input.guestEmail.trim().toLowerCase()
+  const guestPhone = input.guestPhone?.trim() || null
+  const subject = input.subject.trim()
+  const message = input.message.trim()
+
+  if (guestName.length < 2) throw new InquiryError('Please share your name so the studio knows who to write back to.')
+  if (guestName.length > 120) throw new InquiryError('That name is longer than the form can hold.')
+  if (!EMAIL_PATTERN.test(guestEmail)) throw new InquiryError('That email address does not look right — check it and try again.')
+  if (guestPhone && guestPhone.length > 40) throw new InquiryError('That phone number is longer than the form can hold.')
+  if (subject.length < 3) throw new InquiryError('Add a short subject so the studio can route your note.')
+  if (subject.length > 160) throw new InquiryError('Keep the subject under 160 characters.')
+  if (message.length < 10) throw new InquiryError('Tell the studio a little more — a sentence or two helps them answer well.')
+  if (message.length > 5000) throw new InquiryError('Notes are limited to 5,000 characters.')
+  if (!INQUIRY_TOPICS.includes(input.topic)) throw new InquiryError('Choose one of the listed topics.')
+
+  const inquiryId = await prisma.$transaction(async (tx) => {
+    let customer = await tx.customer.findFirst({
+      where: { email: { equals: guestEmail, mode: 'insensitive' } },
+      select: { id: true },
+    })
+    if (!customer) {
+      try {
+        customer = await tx.customer.create({
+          data: {
+            name: guestName,
+            email: guestEmail,
+            phone: guestPhone,
+            tier: 'GUEST',
+          },
+          select: { id: true },
+        })
+      } catch {
+        customer = await tx.customer.findFirst({
+          where: { email: { equals: guestEmail, mode: 'insensitive' } },
+          select: { id: true },
+        })
+      }
+    }
+
+    let id = await nextInquiryId(tx)
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await tx.inquiry.create({
+          data: {
+            id,
+            customerId: customer?.id ?? null,
+            guestName,
+            guestEmail,
+            guestPhone,
+            subject,
+            topic: input.topic,
+            channel: input.channel,
+            message,
+          },
+        })
+        break
+      } catch (error) {
+        if (attempt >= 3) throw error
+        id = await nextInquiryId(tx)
+      }
+    }
+
+    await recordAudit(tx, {
+      staffId: null,
+      actorLabel: `${guestName} (customer)`,
+      action: 'inquiry.received',
+      entity: 'Inquiry',
+      entityId: id,
+      summary: `New inquiry — “${subject}”`,
+      metadata: { channel: input.channel, topic: input.topic },
+    })
+    return id
+  })
+
+  // The guest gets a receipt the moment the studio inbox has the note.
+  await sendInquiryAcknowledgement(inquiryId)
+  return { id: inquiryId }
+}
+
+/**
+ * A customer's email reply, threaded back onto its inquiry by the reply-to
+ * address (`reply+INQ-####@…`). Inbound is always treated as a customer voice:
+ * it reopens a resolved inquiry and never counts toward first-reply time.
+ */
+export async function recordInboundInquiryReply(
+  inquiryId: string,
+  input: { body: string; fromEmail?: string },
+): Promise<{ guestName: string }> {
+  const body = input.body.trim()
+  if (!body) throw new InquiryError('The incoming message was empty.')
+
+  return prisma.$transaction(async (tx) => {
+    const inquiry = await tx.inquiry.findUnique({
+      where: { id: inquiryId },
+      select: { id: true, subject: true, guestName: true, status: true },
+    })
+    if (!inquiry) throw new InquiryError('No inquiry matches that reply address.')
+
+    const now = new Date()
+    await tx.reply.create({
+      data: { inquiryId, staffId: null, body, internal: false, channel: 'email', sentAt: now },
+    })
+    await tx.inquiry.update({
+      where: { id: inquiryId },
+      data: {
+        repliesCount: { increment: 1 },
+        ...(inquiry.status === 'RESOLVED' ? { status: 'OPEN', resolvedAt: null, resolvedById: null } : {}),
+      },
+    })
+    await recordAudit(tx, {
+      staffId: null,
+      actorLabel: `${inquiry.guestName} (customer)`,
+      action: 'inquiry.customer_replied',
+      entity: 'Inquiry',
+      entityId: inquiryId,
+      summary: `${inquiry.guestName} replied by email${input.fromEmail ? ` from ${input.fromEmail}` : ''}`,
+    })
+    return { guestName: inquiry.guestName }
+  })
 }
 
 // ── copy ──────────────────────────────────────────────────────────────────

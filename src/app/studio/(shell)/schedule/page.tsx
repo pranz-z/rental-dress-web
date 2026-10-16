@@ -98,10 +98,10 @@ type ScheduleCapabilities = {
 type DayEntry = { kind: 'DELIVERY' | 'RETURN'; booking: ScheduleBooking }
 
 /** The first day a dress is expected back from cleaning, across all open tickets. */
-function readyDayFor(record: CleaningRow): Date {
+function readyDayFor(record: CleaningRow, bufferDays: number): Date {
   // Cleaning starts when the dress actually comes back, so the clock runs from
   // the ticket (not the original due date — a late return means late cleaning).
-  return addDays(toStudioDay(record.startedAt), record.booking?.bufferDays ?? 2)
+  return addDays(toStudioDay(record.startedAt), bufferDays)
 }
 
 export default async function SchedulePage({
@@ -123,7 +123,7 @@ export default async function SchedulePage({
 
   await markLateBookings(today)
 
-  const [overdue, deliveries, returns, cleaningQueue, recentlySignedOff] = await Promise.all([
+  const [overdue, deliveries, returns, cleaningQueue, recentlySignedOff, settings] = await Promise.all([
     prisma.booking.findMany({
       where: { status: 'LATE' },
       orderBy: { returnDate: 'asc' },
@@ -156,6 +156,7 @@ export default async function SchedulePage({
       take: 4,
       select: cleaningRowSelect,
     }),
+    prisma.studioSettings.findUniqueOrThrow({ where: { id: 'studio' } }),
   ])
 
   const caps: ScheduleCapabilities = {
@@ -176,7 +177,7 @@ export default async function SchedulePage({
 
   const cleaningReadyByDress = new Map<string, Date>()
   for (const record of cleaningQueue) {
-    const ready = readyDayFor(record)
+    const ready = readyDayFor(record, settings.bufferDays)
     const current = cleaningReadyByDress.get(record.dress.id)
     if (!current || ready.getTime() < current.getTime()) cleaningReadyByDress.set(record.dress.id, ready)
   }
@@ -294,6 +295,7 @@ export default async function SchedulePage({
                     caps={caps}
                     returnTo={returnTo}
                     cleaningReadyByDress={cleaningReadyByDress}
+                    bufferDays={settings.bufferDays}
                   />
                 )
               })}
@@ -311,6 +313,7 @@ export default async function SchedulePage({
               caps={caps}
               returnTo={returnTo}
               today={today}
+              bufferDays={settings.bufferDays}
             />
           ) : null}
         </>
@@ -441,6 +444,7 @@ function DaySection({
   caps,
   returnTo,
   cleaningReadyByDress,
+  bufferDays,
 }: {
   day: Date
   entries: DayEntry[]
@@ -448,6 +452,7 @@ function DaySection({
   caps: ScheduleCapabilities
   returnTo: string
   cleaningReadyByDress: Map<string, Date>
+  bufferDays: number
 }) {
   const deliveryCount = entries.filter((entry) => entry.kind === 'DELIVERY').length
   const returnCount = entries.length - deliveryCount
@@ -489,6 +494,7 @@ function DaySection({
               caps={caps}
               returnTo={returnTo}
               cleaningReady={cleaningReadyByDress.get(entry.booking.dress.id)}
+              bufferDays={bufferDays}
             />
           ))}
         </ul>
@@ -502,11 +508,13 @@ function ScheduleEntryRow({
   caps,
   returnTo,
   cleaningReady,
+  bufferDays,
 }: {
   entry: DayEntry
   caps: ScheduleCapabilities
   returnTo: string
   cleaningReady?: Date
+  bufferDays: number
 }) {
   const booking = entry.booking
   const meta = BOOKING_STATUS_META[booking.status]
@@ -564,7 +572,7 @@ function ScheduleEntryRow({
             </>
           ) : (
             <p className="mt-1 text-xs text-ink-muted">
-              Cleaning &amp; inspection until {formatDay(blockedUntil(booking.returnDate, booking.bufferDays))}.
+              Cleaning &amp; inspection until {formatDay(blockedUntil(booking.returnDate, bufferDays))}.
             </p>
           )}
         </div>
@@ -640,12 +648,14 @@ function CleaningSection({
   caps,
   returnTo,
   today,
+  bufferDays,
 }: {
   records: CleaningRow[]
   recentlySignedOff: CleaningRow[]
   caps: ScheduleCapabilities
   returnTo: string
   today: Date
+  bufferDays: number
 }) {
   return (
     <SectionShell
@@ -660,7 +670,7 @@ function CleaningSection({
       ) : (
         <ul className="divide-y divide-line">
           {records.map((record) => {
-            const ready = readyDayFor(record)
+            const ready = readyDayFor(record, bufferDays)
             const daysInCleaning = Math.max(diffDays(record.startedAt, today), 0)
             return (
               <li key={record.id} className="px-4 py-4 sm:px-5">

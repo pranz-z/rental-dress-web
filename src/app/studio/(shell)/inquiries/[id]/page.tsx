@@ -31,6 +31,7 @@ import {
   can,
 } from '@/lib/domain'
 import { INQUIRY_DONE_MESSAGES, formatReplyHours } from '@/lib/inquiries'
+import { parseBusinessHours, replyDueAt } from '@/lib/business-hours'
 import {
   assignInquiryAction,
   reopenInquiryAction,
@@ -108,10 +109,10 @@ export default async function InquiryDetailPage({
     inquiry.firstReplyAt === null
       ? null
       : (inquiry.firstReplyAt.getTime() - inquiry.receivedAt.getTime()) / 3_600_000
+  // The reply target counts only opening hours (Settings → Hours & delivery).
+  const replyDue = replyDueAt(inquiry.receivedAt, settings.replyTargetHours, parseBusinessHours(settings.businessHours))
   const targetOverdue =
-    inquiry.firstReplyAt === null &&
-    inquiry.status === 'OPEN' &&
-    Date.now() - inquiry.receivedAt.getTime() > settings.replyTargetHours * 3_600_000
+    inquiry.firstReplyAt === null && inquiry.status === 'OPEN' && Date.now() > replyDue.getTime()
 
   return (
     <div className="space-y-6">

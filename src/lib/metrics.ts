@@ -51,7 +51,7 @@ export async function utilizationPercent(days = 30, today: Date = todayUtc(), cl
   const db = resolve(client)
   const start = today
   const end = addDays(start, days)
-  const [dresses, bookings, blocks] = await Promise.all([
+  const [dresses, bookings, blocks, settings] = await Promise.all([
     db.dress.count({ where: { status: { not: 'RETIRED' } } }),
     db.booking.findMany({
       where: {
@@ -59,12 +59,13 @@ export async function utilizationPercent(days = 30, today: Date = todayUtc(), cl
         returnDate: { gte: start },
         deliveryDate: { lt: end },
       },
-      select: { dressId: true, deliveryDate: true, returnDate: true, bufferDays: true },
+      select: { dressId: true, deliveryDate: true, returnDate: true },
     }),
     db.dressBlock.findMany({
       where: { endDate: { gte: start }, startDate: { lt: end } },
       select: { dressId: true, startDate: true, endDate: true },
     }),
+    db.studioSettings.findUniqueOrThrow({ where: { id: 'studio' }, select: { bufferDays: true } }),
   ])
 
   const busy = new Map<string, Set<string>>()
@@ -76,7 +77,7 @@ export async function utilizationPercent(days = 30, today: Date = todayUtc(), cl
     }
     busy.set(dressId, set)
   }
-  for (const row of bookings) mark(row.dressId, row.deliveryDate, addDays(row.returnDate, row.bufferDays))
+  for (const row of bookings) mark(row.dressId, row.deliveryDate, addDays(row.returnDate, settings.bufferDays))
   for (const row of blocks) mark(row.dressId, row.startDate, row.endDate)
 
   let busyDays = 0

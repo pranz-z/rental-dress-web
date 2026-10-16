@@ -82,6 +82,25 @@ export const DRESS_STATUS_META: Record<DressStatus, { label: string; tone: Tone;
   RETIRED: { label: 'Retired', tone: 'neutral', description: 'Out of rotation.' },
 }
 
+export const DRESS_CATEGORIES = ['Gown', 'Midi', 'Maxi', 'Mini', 'Two-piece'] as const
+
+export const CONDITION_SEVERITIES = ['NOTE', 'MINOR', 'MAJOR'] as const
+export type ConditionSeverity = (typeof CONDITION_SEVERITIES)[number]
+
+export const CONDITION_SEVERITY_META: Record<ConditionSeverity, { label: string; tone: Tone }> = {
+  NOTE: { label: 'Note', tone: 'neutral' },
+  MINOR: { label: 'Minor', tone: 'gold' },
+  MAJOR: { label: 'Major', tone: 'clay' },
+}
+
+export const DRESS_IMAGE_KIND_LABEL = {
+  FRONT: 'Front',
+  BACK: 'Back',
+  DETAIL: 'Detail',
+  ON_BODY: 'On body',
+  MOVEMENT: 'In movement',
+} as const
+
 // ── inquiries ─────────────────────────────────────────────────────────────
 
 export const INQUIRY_TOPICS = [
@@ -173,6 +192,7 @@ export const CAPABILITIES = [
   'settings.view',
   'settings.staff',
   'settings.policies',
+  'settings.templates',
   'audit.view',
 ] as const
 export type Capability = (typeof CAPABILITIES)[number]
@@ -204,6 +224,7 @@ const ROLE_CAPABILITIES: Record<StaffRole, Capability[]> = {
     'customers.view',
     'customers.note',
     'settings.view',
+    'settings.templates',
     'audit.view',
   ],
   STYLIST: [

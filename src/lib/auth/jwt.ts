@@ -24,20 +24,22 @@ function secretKey(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
+export type PendingStage = 'two-factor' | 'password' | 'enroll'
+
 export type SessionClaims = {
   staffId: string
-  /** true while the visitor has cleared their password but not yet their 2FA code */
-  pendingTwoFactor: boolean
+  /** Set while the visitor is between sign-in steps (set password, enroll 2FA, enter 2FA code). */
+  pendingStage: PendingStage | null
   issuedAt: number
   expiresAt: number
 }
 
 export async function signSessionToken(
   staffId: string,
-  options: { minutes?: number; pendingTwoFactor?: boolean } = {},
+  options: { minutes?: number; stage?: PendingStage } = {},
 ): Promise<string> {
   const minutes = options.minutes ?? SESSION_MINUTES
-  return new SignJWT({ staffId, twoFactorStage: options.pendingTwoFactor ?? false })
+  return new SignJWT({ staffId, stage: options.stage ?? null })
     .setProtectedHeader({ alg: ALG })
     .setIssuedAt()
     .setExpirationTime(`${minutes}m`)
@@ -49,9 +51,13 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
     const { payload } = await jwtVerify(token, secretKey(), { algorithms: [ALG] })
     if (typeof payload.staffId !== 'string' || payload.staffId.length === 0) return null
     if (typeof payload.exp !== 'number' || typeof payload.iat !== 'number') return null
+    const stage =
+      payload.stage === 'two-factor' || payload.stage === 'password' || payload.stage === 'enroll'
+        ? payload.stage
+        : null
     return {
       staffId: payload.staffId,
-      pendingTwoFactor: payload.twoFactorStage === true,
+      pendingStage: stage,
       issuedAt: payload.iat * 1000,
       expiresAt: payload.exp * 1000,
     }

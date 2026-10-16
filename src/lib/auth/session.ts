@@ -4,7 +4,7 @@
 import { cookies } from 'next/headers'
 import type { StaffUser } from '@prisma/client'
 import { prisma } from '../db'
-import { PENDING_2FA_MINUTES, SESSION_MINUTES, signSessionToken, verifySessionToken } from './jwt'
+import { PENDING_2FA_MINUTES, SESSION_MINUTES, signSessionToken, verifySessionToken, type PendingStage } from './jwt'
 
 export const STAFF_COOKIE = 'mr_studio_session'
 export const PENDING_2FA_COOKIE = 'mr_studio_2fa'
@@ -28,22 +28,22 @@ export async function endSession(): Promise<void> {
   jar.delete(PENDING_2FA_COOKIE)
 }
 
-export async function startPendingTwoFactor(staffId: string): Promise<void> {
-  const token = await signSessionToken(staffId, { minutes: PENDING_2FA_MINUTES, pendingTwoFactor: true })
+export async function startPendingStage(staffId: string, stage: PendingStage): Promise<void> {
+  const token = await signSessionToken(staffId, { minutes: PENDING_2FA_MINUTES, stage })
   const jar = await cookies()
   jar.set(PENDING_2FA_COOKIE, token, { ...cookieDefaults, maxAge: PENDING_2FA_MINUTES * 60 })
 }
 
-export async function readPendingTwoFactor(): Promise<{ staffId: string } | null> {
+export async function readPendingStage(): Promise<{ staffId: string; stage: PendingStage } | null> {
   const jar = await cookies()
   const token = jar.get(PENDING_2FA_COOKIE)?.value
   if (!token) return null
   const claims = await verifySessionToken(token)
-  if (!claims || !claims.pendingTwoFactor) return null
-  return { staffId: claims.staffId }
+  if (!claims || !claims.pendingStage) return null
+  return { staffId: claims.staffId, stage: claims.pendingStage }
 }
 
-export async function clearPendingTwoFactor(): Promise<void> {
+export async function clearPendingStage(): Promise<void> {
   const jar = await cookies()
   jar.delete(PENDING_2FA_COOKIE)
 }
@@ -60,10 +60,14 @@ export async function currentStaff(): Promise<StaffUser | null> {
   const token = jar.get(STAFF_COOKIE)?.value
   if (!token) return null
   const claims = await verifySessionToken(token)
-  if (!claims || claims.pendingTwoFactor) return null
+  if (!claims || claims.pendingStage) return null
 
   const staff = await prisma.staffUser.findFirst({ where: { id: claims.staffId, active: true } })
   if (!staff) return null
+  // A session without the mandatory steps finished is not a session: the
+  // studio needs the password changed and the second factor enrolled first.
+  if (staff.mustChangePassword) return null
+  if (staff.twoFactorRequired && !staff.twoFactorEnabled) return null
 
   if (!staff.lastActiveAt || Date.now() - staff.lastActiveAt.getTime() > ACTIVE_TOUCH_MS) {
     await prisma.staffUser.update({ where: { id: staff.id }, data: { lastActiveAt: new Date() } }).catch(() => {})

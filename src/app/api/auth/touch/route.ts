@@ -15,16 +15,19 @@ export async function POST(): Promise<NextResponse> {
   const jar = await cookies()
   const raw = jar.get(STAFF_COOKIE)?.value
   const claims = raw ? await verifySessionToken(raw) : null
-  if (!claims || claims.pendingTwoFactor) {
+  if (!claims || claims.pendingStage) {
     return NextResponse.json({ ok: false, reason: 'no-session' }, { status: 401 })
   }
 
   const staff = await prisma.staffUser.findFirst({
     where: { id: claims.staffId, active: true },
-    select: { id: true },
+    select: { id: true, mustChangePassword: true, twoFactorRequired: true, twoFactorEnabled: true },
   })
   if (!staff) {
     return NextResponse.json({ ok: false, reason: 'inactive' }, { status: 401 })
+  }
+  if (staff.mustChangePassword || (staff.twoFactorRequired && !staff.twoFactorEnabled)) {
+    return NextResponse.json({ ok: false, reason: 'steps-pending' }, { status: 401 })
   }
 
   const fresh = await signSessionToken(staff.id)

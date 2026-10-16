@@ -16,9 +16,6 @@ export type DressSeed = {
   sleeve: string
   fabric: string
   retailValue: number
-  rentalPrice4: number
-  rentalPrice8: number
-  deposit: number
   status: 'AVAILABLE' | 'RENTED' | 'CLEANING' | 'RETIRED'
   timesRented: number
   careNotes: string
@@ -46,9 +43,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Sleeveless',
     fabric: 'Silk crepe',
     retailValue: 52000,
-    rentalPrice4: 18500,
-    rentalPrice8: 29500,
-    deposit: 15000,
     status: 'AVAILABLE',
     timesRented: 38,
     careNotes: 'Dry clean only, steam the cowl neck on a low setting, store on the padded hanger with the bust form inside.',
@@ -73,9 +67,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Cap sleeve',
     fabric: 'Hand-beaded tulle',
     retailValue: 89000,
-    rentalPrice4: 32000,
-    rentalPrice8: 48000,
-    deposit: 25000,
     status: 'RENTED',
     timesRented: 52,
     careNotes: 'Spot clean only. Never hang by the beaded straps; use the internal grosgrain loop and return in the cotton bag.',
@@ -100,9 +91,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Long sleeve',
     fabric: 'Corded lace',
     retailValue: 42000,
-    rentalPrice4: 14000,
-    rentalPrice8: 23000,
-    deposit: 12000,
     status: 'AVAILABLE',
     timesRented: 27,
     careNotes: 'French lace snags easily: remove jewellery before dressing. Steamed and pressed by the studio after each rental.',
@@ -126,9 +114,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Spaghetti strap',
     fabric: 'Bias-cut satin',
     retailValue: 31000,
-    rentalPrice4: 9500,
-    rentalPrice8: 16000,
-    deposit: 9000,
     status: 'RENTED',
     timesRented: 31,
     careNotes: 'Water marks show on this satin; the studio re-presses after every return. Hang to air before returning.',
@@ -152,9 +137,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Off-shoulder',
     fabric: 'Silk velvet',
     retailValue: 76000,
-    rentalPrice4: 26000,
-    rentalPrice8: 40000,
-    deposit: 20000,
     status: 'AVAILABLE',
     timesRented: 24,
     careNotes: 'Velvet must be steamed, never pressed. Return in the breathable garment bag provided.',
@@ -178,9 +160,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Sleeveless',
     fabric: 'Layered tulle',
     retailValue: 64000,
-    rentalPrice4: 21000,
-    rentalPrice8: 33000,
-    deposit: 18000,
     status: 'AVAILABLE',
     timesRented: 19,
     careNotes: 'Six tulle layers; the studio re-fluffs and steams each layer. Keep away from open flame and Velcro.',
@@ -205,9 +184,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Long sleeve',
     fabric: 'Plissé chiffon',
     retailValue: 38000,
-    rentalPrice4: 12000,
-    rentalPrice8: 19500,
-    deposit: 10000,
     status: 'CLEANING',
     timesRented: 33,
     careNotes: 'The pleats live on their own roll; the studio re-sets them after cleaning before it goes back on the rack.',
@@ -231,9 +207,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Flutter',
     fabric: 'Silk chiffon',
     retailValue: 52000,
-    rentalPrice4: 16500,
-    rentalPrice8: 26000,
-    deposit: 14000,
     status: 'AVAILABLE',
     timesRented: 41,
     careNotes: 'Wrap ties must be knotted, not pinned. Cool iron on the reverse only.',
@@ -257,9 +230,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Sleeveless',
     fabric: 'Sequin mesh',
     retailValue: 34000,
-    rentalPrice4: 11000,
-    rentalPrice8: 18000,
-    deposit: 10000,
     status: 'AVAILABLE',
     timesRented: 18,
     careNotes: 'Sequins are hand-sewn; the studio checks the hem after every rental. Return inside the padded sleeve.',
@@ -283,9 +253,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Sleeveless',
     fabric: 'Duchess satin',
     retailValue: 68000,
-    rentalPrice4: 23500,
-    rentalPrice8: 37000,
-    deposit: 18000,
     status: 'AVAILABLE',
     timesRented: 12,
     careNotes: 'Duchess satin shows every crease: the studio hangs and steams it for 24 hours before dispatch.',
@@ -310,9 +277,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Long sleeve',
     fabric: 'Stretch crepe',
     retailValue: 40000,
-    rentalPrice4: 13000,
-    rentalPrice8: 21000,
-    deposit: 11000,
     status: 'AVAILABLE',
     timesRented: 9,
     careNotes: 'Wide legs take up the hem steam; the studio presses the centre crease before each dispatch.',
@@ -337,9 +301,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Three-quarter',
     fabric: 'Silk brocade',
     retailValue: 45000,
-    rentalPrice4: 15000,
-    rentalPrice8: 24000,
-    deposit: 12000,
     status: 'CLEANING',
     timesRented: 15,
     careNotes: 'Brocade is never pressed flat; the studio rolls the seams and steams from the inside.',
@@ -363,9 +324,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Sleeveless',
     fabric: 'Silk organza',
     retailValue: 72000,
-    rentalPrice4: 24500,
-    rentalPrice8: 38500,
-    deposit: 19000,
     status: 'AVAILABLE',
     timesRented: 21,
     careNotes: 'Organza crushes; the studio steams it over the skirt form the morning it leaves.',
@@ -390,9 +348,6 @@ export const DRESSES: DressSeed[] = [
     sleeve: 'Long sleeve',
     fabric: 'Stretch velvet',
     retailValue: 36000,
-    rentalPrice4: 11500,
-    rentalPrice8: 18500,
-    deposit: 10000,
     status: 'AVAILABLE',
     timesRented: 13,
     careNotes: 'Stretch velvet is steamed, never ironed. Keep the nap brushed in one direction before dispatch.',
@@ -1056,6 +1011,141 @@ export const ACCESSORIES: AccessorySeed[] = [
   },
 ]
 
+export type ReviewSeed = {
+  dress: string
+  customer: string
+  rating: number
+  title: string
+  body: string
+  occasion: string
+  /** Days before today the dress was worn — sets the realistic date. */
+  wornDaysAgo: number
+  postedDaysAgo: number
+}
+
+export const REVIEWS: ReviewSeed[] = [
+  {
+    dress: 'valentina-silk-gown',
+    customer: 'Prisha Raman',
+    rating: 5,
+    title: 'The cowl neck does the work for you',
+    body: 'Wore it to my cousin’s wedding and three people asked where I bought it. I didn’t — which is the best part. The silk has a heavy, expensive drape and the S fit true to my usual size.',
+    occasion: 'Wedding guest',
+    wornDaysAgo: 24,
+    postedDaysAgo: 21,
+  },
+  {
+    dress: 'valentina-silk-gown',
+    customer: 'Dana Whitmore',
+    rating: 5,
+    title: 'Ordered the backup size and used it',
+    body: 'I was between an S and an M after a recent fitting. The backup size arrived sealed, I opened the M, and the return couldn’t have been easier. Genuinely the calmest formal-dress experience I’ve had.',
+    occasion: 'Gala',
+    wornDaysAgo: 58,
+    postedDaysAgo: 54,
+  },
+  {
+    dress: 'valentina-silk-gown',
+    customer: 'Marlene Chen',
+    rating: 4,
+    title: 'Beautiful; plan your hem',
+    body: 'Stunning dress, but it runs long even in flats — the studio sent steamer instructions and it pressed perfectly. Would rent again for a black-tie evening.',
+    occasion: 'Black tie',
+    wornDaysAgo: 96,
+    postedDaysAgo: 92,
+  },
+  {
+    dress: 'aurelia-beaded-gown',
+    customer: 'Farah El-Amin',
+    rating: 5,
+    title: 'Feels like it was made for the room',
+    body: 'The beading is dense and quiet — it catches candlelight instead of shouting. I rented the 8-day window and wore it twice: the gala and the after-party brunch.',
+    occasion: 'Gala',
+    wornDaysAgo: 15,
+    postedDaysAgo: 12,
+  },
+  {
+    dress: 'aurelia-beaded-gown',
+    customer: 'Georgia Halla',
+    rating: 5,
+    title: 'Heavier than I expected, in the best way',
+    body: 'This is a proper gown. The M was right for my bust and the built-in support meant I didn’t need anything underneath. The prepaid label made the return a ten-minute errand.',
+    occasion: 'Anniversary',
+    wornDaysAgo: 44,
+    postedDaysAgo: 41,
+  },
+  {
+    dress: 'rosalind-lace-midi',
+    customer: 'Amelia Cruz',
+    rating: 5,
+    title: 'My rehearsal-dinner dress',
+    body: 'Corded lace with a lovely weight. I’m 5’6” and the L grazed my knee exactly as pictured. Got compliments from both grandmothers, which is the real metric.',
+    occasion: 'Rehearsal dinner',
+    wornDaysAgo: 33,
+    postedDaysAgo: 29,
+  },
+  {
+    dress: 'rosalind-lace-midi',
+    customer: 'Sloane Barrett',
+    rating: 4,
+    title: 'Perfect for a garden ceremony',
+    body: 'Wore it as a wedding guest in September. The blush lining reads warmer in person than on screen — in a good way. Took off half a star only because the sleeves are snug on broader shoulders.',
+    occasion: 'Wedding guest',
+    wornDaysAgo: 71,
+    postedDaysAgo: 66,
+  },
+  {
+    dress: 'celeste-satin-slip',
+    customer: 'Noor Haddad',
+    rating: 5,
+    title: 'The slip that behaves',
+    body: 'No clinging, no static, and the XS skimmed without needing shapewear. Wore it to a birthday dinner and then to the office with a blazer the next day.',
+    occasion: 'Birthday dinner',
+    wornDaysAgo: 19,
+    postedDaysAgo: 16,
+  },
+  {
+    dress: 'margaux-velvet-gown',
+    customer: 'Elena Rossi',
+    rating: 5,
+    title: 'Velvet with a conscience',
+    body: 'Deep mulberry in person, close to the photos. The M fit my 5’9” frame with heels. I’ve rented four times now and the condition has been immaculate every single time.',
+    occasion: 'Black tie',
+    wornDaysAgo: 52,
+    postedDaysAgo: 48,
+  },
+  {
+    dress: 'juliette-tulle-gown',
+    customer: 'Naomi Clarke',
+    rating: 5,
+    title: 'Bridal-shower perfect',
+    body: 'Airy tulle, no itch, and it photographs like a cloud. The team steamed it before delivery so it arrived ready to wear. My mother has already asked to borrow my membership.',
+    occasion: 'Bridal shower',
+    wornDaysAgo: 27,
+    postedDaysAgo: 23,
+  },
+  {
+    dress: 'seraphine-chiffon-maxi',
+    customer: 'Amara Okafor',
+    rating: 5,
+    title: 'Moves like water',
+    body: 'Rented the L for an outdoor wedding and it handled a breezy ceremony without a single wardrobe emergency. The champagne underlay is subtle and elegant.',
+    occasion: 'Wedding guest',
+    wornDaysAgo: 40,
+    postedDaysAgo: 36,
+  },
+  {
+    dress: 'seraphine-chiffon-maxi',
+    customer: 'Tessa Lindgren',
+    rating: 4,
+    title: 'Lovely; size down if between',
+    body: 'I went with the M on the studio’s advice and it was right. The straps are adjustable, which saved me. Delivery to my hotel was early and the return label was already in the box.',
+    occasion: 'Wedding guest',
+    wornDaysAgo: 63,
+    postedDaysAgo: 59,
+  },
+]
+
 export const NOTIFICATION_TEMPLATES = [
   {
     id: 'confirmation',
@@ -1086,15 +1176,8 @@ Warmly,
 The Maison Rêve studio`,
   },
   {
-    id: 'return_reminder',
-    name: 'Return reminder',
-    channel: 'SMS' as const,
-    subject: 'Return due {{returnDate}}',
-    body: 'Maison Rêve: {{dressName}} is due back {{returnDate}}. Your prepaid label is in the box — a courier can also collect it ({{studioPhone}}).',
-  },
-  {
     id: 'returned',
-    name: 'Return received, cleaning started',
+    name: 'Return received',
     channel: 'EMAIL' as const,
     subject: 'We have your {{dressName}} — thank you',
     body: `Hi {{firstName}},
@@ -1121,18 +1204,77 @@ Warmly,
 {{staffName}}
 Maison Rêve`,
   },
+  {
+    id: 'booking_received',
+    name: 'Booking received',
+    channel: 'EMAIL' as const,
+    subject: 'We have your reservation — {{bookingId}}',
+    body: `Hi {{firstName}},
+
+Your {{dressName}} in size {{size}} is reserved for {{eventDate}}. The studio is reviewing it now, and you will have a confirmation — with payment captured and delivery details — within a few hours.
+
+Nothing is charged until we confirm, and cancelling is free up to {{cancellationWindow}} days before your event.
+
+Warmly,
+The Maison Rêve studio`,
+  },
+  {
+    id: 'return_reminder_2day',
+    name: 'Return reminder — two days out',
+    channel: 'EMAIL' as const,
+    subject: '{{dressName}} is due back in two days',
+    body: `Hi {{firstName}},
+
+A gentle note that your {{dressName}} is due back on {{returnDate}}, two days from now. Your prepaid label is in the box — drop it with any UPS point, or reply here and a courier can collect it from your address.
+
+We hope the evening was everything you wanted.
+
+Warmly,
+The Maison Rêve studio`,
+  },
+  {
+    id: 'return_reminder_1day',
+    name: 'Return reminder — due tomorrow',
+    channel: 'EMAIL' as const,
+    subject: '{{dressName}} is due back tomorrow',
+    body: `Hi {{firstName}},
+
+A last nudge that your {{dressName}} is due back tomorrow, {{returnDate}}. Pop the prepaid label on the box and hand it to any UPS point — or reply here and we will arrange a collection.
+
+Warmly,
+The Maison Rêve studio`,
+  },
+  {
+    id: 'inquiry_received',
+    name: 'Inquiry acknowledgement',
+    channel: 'EMAIL' as const,
+    subject: 'We have your note — {{subject}}',
+    body: `Hi {{firstName}},
+
+Thank you for writing to Maison Rêve. A stylist is reading your note now and will reply within a couple of hours — sooner if the studio is quiet.
+
+If your question is about a particular dress, you can answer this email and it lands straight on your inquiry in our studio.
+
+Warmly,
+The Maison Rêve studio`,
+  },
 ]
 
 export const STUDIO_SETTINGS = {
   id: 'studio',
   rentalPeriods: [4, 8],
+  rentalPercent4: 35,
+  rentalPercent8: 55,
   bufferDays: 1,
   prepDays: 1,
+  extensionFeePerDay: 4500,
   lateFeePerDay: 2500,
   lateGraceDays: 1,
   depositPercent: 20,
   insuranceFee: 1500,
   cancellationWindowDays: 7,
+  cancellationRefundPercent: 50,
+  autoConfirmBookings: false,
   cleaningTurnaroundHours: 48,
   businessHours: {
     monday: { open: '09:00', close: '18:00' },
@@ -1144,10 +1286,10 @@ export const STUDIO_SETTINGS = {
     sunday: null,
   },
   deliveryZones: [
-    { name: 'Boston & Cambridge', etaDays: 1, courierFee: 0 },
-    { name: 'Greater New England', etaDays: 2, courierFee: 0 },
-    { name: 'New York & Tri-State', etaDays: 2, courierFee: 2500 },
-    { name: 'Nationwide, two-day air', etaDays: 3, courierFee: 4500 },
+    { name: 'Boston & Cambridge', courier: 'Studio courier', etaDays: 1, courierFee: 0, cutoff: '16:00' },
+    { name: 'Greater New England', courier: 'UPS Ground', etaDays: 2, courierFee: 0, cutoff: '14:00' },
+    { name: 'New York & Tri-State', courier: 'FedEx 2Day', etaDays: 2, courierFee: 2500, cutoff: '14:00' },
+    { name: 'Nationwide, two-day air', courier: 'UPS 2nd Day Air', etaDays: 3, courierFee: 4500, cutoff: '12:00' },
   ],
   studioEmail: 'studio@maisonreve.com',
   studioPhone: '(617) 555-0148',

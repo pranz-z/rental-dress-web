@@ -17,6 +17,7 @@ import {
   type InquiryTopic,
 } from '@/lib/domain'
 import { formatReplyHours } from '@/lib/inquiries'
+import { parseBusinessHours, replyDueAt } from '@/lib/business-hours'
 
 export const metadata: Metadata = { title: 'Inquiries' }
 export const dynamic = 'force-dynamic'
@@ -98,6 +99,8 @@ export default async function InquiriesPage({
 
   const pageCount = Math.max(Math.ceil(totalMatching / PAGE_SIZE), 1)
   const page = Math.min(requestedPage, pageCount)
+  // The reply clock counts only opening hours (Settings → Hours & delivery).
+  const businessHours = parseBusinessHours(settings.businessHours)
   const inquiries = await prisma.inquiry.findMany({
     where,
     orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
@@ -279,7 +282,11 @@ export default async function InquiriesPage({
                   {inquiries.map((inquiry) => {
                     const meta = INQUIRY_STATUS_META[inquiry.status]
                     const topicMeta = INQUIRY_TOPIC_META[inquiry.topic]
-                    const indicator = replyIndicator(inquiry, settings.replyTargetHours)
+                    const indicator = replyIndicator(
+                      inquiry,
+                      replyDueAt(inquiry.receivedAt, settings.replyTargetHours, businessHours),
+                      settings.replyTargetHours,
+                    )
                     return (
                       <Tr key={inquiry.id} className="relative">
                         <Td>
@@ -363,6 +370,7 @@ export default async function InquiriesPage({
 /** First-reply status line shown under the received time. */
 function replyIndicator(
   inquiry: { status: InquiryStatus; receivedAt: Date; firstReplyAt: Date | null },
+  dueAt: Date,
   targetHours: number,
 ): { text: string; danger: boolean } | null {
   if (inquiry.firstReplyAt) {
@@ -370,7 +378,7 @@ function replyIndicator(
     return { text: `First reply in ${formatReplyHours(hours)}`, danger: false }
   }
   if (inquiry.status !== 'OPEN') return null
-  const overdue = Date.now() - inquiry.receivedAt.getTime() > targetHours * 3_600_000
+  const overdue = Date.now() > dueAt.getTime()
   return {
     text: overdue ? `Past the ${targetHours}-hour reply target` : 'Awaiting the first reply',
     danger: overdue,

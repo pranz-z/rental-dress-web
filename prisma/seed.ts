@@ -12,11 +12,12 @@
 import bcrypt from 'bcryptjs'
 import { PrismaClient, type BookingStatus, type PaymentStatus } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { ACCESSORIES, CUSTOMERS, DRESSES, NOTIFICATION_TEMPLATES, STAFF, STUDIO_SETTINGS } from './seed-content'
+import { ACCESSORIES, CUSTOMERS, DRESSES, NOTIFICATION_TEMPLATES, REVIEWS, STAFF, STUDIO_SETTINGS } from './seed-content'
 import { addDays, addMonths, isoDay, startOfMonth, todayUtc } from '../src/lib/dates'
 import { occupancyWindow, rentalsReleased } from '../src/lib/availability'
 import { averageFirstReplyMinutes, revenueForRange, revenueThisMonth, utilizationPercent } from '../src/lib/metrics'
 import { formatMoney } from '../src/lib/money'
+import { depositFor, rentalPriceFor } from '../src/lib/pricing'
 
 try {
   process.loadEnvFile('.env.local')
@@ -830,9 +831,6 @@ async function main() {
         sleeve: seed.sleeve,
         fabric: seed.fabric,
         retailValue: seed.retailValue,
-        rentalPrice4: seed.rentalPrice4,
-        rentalPrice8: seed.rentalPrice8,
-        deposit: seed.deposit,
         status: seed.status,
         timesRented: seed.timesRented,
         careNotes: seed.careNotes,
@@ -882,9 +880,9 @@ async function main() {
     dressBySlug.set(seed.slug, {
       id: dress.id,
       name: dress.name,
-      rent4: dress.rentalPrice4,
-      rent8: dress.rentalPrice8,
-      deposit: dress.deposit,
+      rent4: rentalPriceFor(seed.retailValue, 4, STUDIO_SETTINGS),
+      rent8: rentalPriceFor(seed.retailValue, 8, STUDIO_SETTINGS),
+      deposit: depositFor(seed.retailValue, STUDIO_SETTINGS),
     })
   }
   const dressId = (slug: string) => dressBySlug.get(slug)!.id
@@ -1646,6 +1644,24 @@ async function main() {
     await prisma.subscriber.create({ data: { email, source: 'home' } })
   }
 
+  // reviews — the quotes the storefront dress pages carry
+  const customerIdByName = new Map(CUSTOMERS.map((entry) => [entry.name, customerId(entry.name)]))
+  for (const review of REVIEWS) {
+    await prisma.review.create({
+      data: {
+        dressId: dressId(review.dress),
+        customerId: customerIdByName.get(review.customer) ?? null,
+        customerName: review.customer,
+        rating: review.rating,
+        title: review.title,
+        body: review.body,
+        occasion: review.occasion,
+        wornOn: day(-review.wornDaysAgo),
+        createdAt: timestamp(-review.postedDaysAgo, 15),
+      },
+    })
+  }
+
   // ── headline figures, reconciled from real payments ────────────────────
   // The dashboard reads its numbers from this ledger. Where the month needs one
   // more settlement to match the studio's books, it is recorded as a real
@@ -1755,6 +1771,7 @@ async function wipe() {
   await prisma.dressImage.deleteMany()
   await prisma.dressSize.deleteMany()
   await prisma.favorite.deleteMany()
+  await prisma.review.deleteMany()
   await prisma.eventListItem.deleteMany()
   await prisma.eventList.deleteMany()
   await prisma.dress.deleteMany()

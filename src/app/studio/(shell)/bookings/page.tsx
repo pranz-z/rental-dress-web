@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Table, TableWrap, Td, Th, Tr } from '@/components/ui/table'
 import { requireCapability } from '@/lib/auth/guards'
 import { markLateBookings } from '@/lib/bookings'
+import { sendReturnReminders } from '@/lib/notifications'
 import { formatDay, todayUtc } from '@/lib/dates'
 import { prisma } from '@/lib/db'
 import { BOOKING_STATUS_META, can, type BookingStatus } from '@/lib/domain'
@@ -50,6 +51,8 @@ export default async function BookingsPage({
 
   // Rule: past-due bookings become Late the moment the studio looks at them.
   await markLateBookings(todayUtc())
+  // Return reminders ride the same lazy sweep — at most one send per booking.
+  await sendReturnReminders(todayUtc())
 
   const searchFilter = q
     ? {
