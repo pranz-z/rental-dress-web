@@ -1,10 +1,11 @@
 /**
  * The local outbox.
  *
- * In development — and any deployment without a transactional-email key — every
- * message the studio or the storefront sends is written here as a JSON file and
- * listed at /studio/dev/outbox. The folder is the only consumer of these files,
- * and it is never exposed to customers.
+ * In development without a transactional-email key, every message the studio
+ * or the storefront sends is written here as a JSON file and listed at
+ * /studio/dev/outbox. Production never writes it: a serverless filesystem is
+ * read-only (and /tmp dies with the instance), so `sendEmail` skips delivery
+ * with a warning instead of pretending the message was stored anywhere.
  */
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -38,6 +39,12 @@ function fileName(message: OutboxMessage): string {
 }
 
 export async function writeOutboxMessage(message: OutboxMessage): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    // Defence in depth: nothing may try to persist an email to the local
+    // filesystem in production. The outbox page is unreachable there too.
+    console.warn('[email] refused to write the development outbox in production')
+    return
+  }
   const dir = outboxDir()
   await mkdir(dir, { recursive: true })
   await writeFile(path.join(dir, fileName(message)), JSON.stringify(message, null, 2), 'utf8')

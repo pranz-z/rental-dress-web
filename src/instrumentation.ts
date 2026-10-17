@@ -57,6 +57,11 @@ export function register(): void {
   if (missing.length > 0) {
     console.error(`[startup] Missing required environment variables: ${missing.join(', ')} — see README launch checklist.`)
   }
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(
+      '[startup] RESEND_API_KEY is not set — transactional email is disabled on this deployment (bookings and the studio keep working).',
+    )
+  }
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_MODE) {
     console.info('[startup] STRIPE_MODE is not set; Stripe runs in test mode by default.')
   }

@@ -309,7 +309,9 @@ export async function sendTestTemplate(staff: StaffUser, kind: EditableEmailKind
   })
   return result.provider === 'outbox'
     ? `Test sent to ${staff.email} — it lands in the local outbox while no email provider key is set.`
-    : `Test sent to ${staff.email}.`
+    : result.provider === 'disabled'
+      ? `Email delivery is disabled on this deployment (no RESEND_API_KEY). The template renders fine — add a key and send again to see it in a mailbox.`
+      : `Test sent to ${staff.email}.`
 }
 
 // ── staff accounts ────────────────────────────────────────────────────────

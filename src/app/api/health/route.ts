@@ -41,7 +41,8 @@ export async function GET() {
     ok = false
   }
 
-  checks.email = emailProvider()
+  const provider = emailProvider()
+  checks.email = provider === 'disabled' ? 'disabled (RESEND_API_KEY not set)' : provider
   checks.inboundEmail =
     process.env.EMAIL_INBOUND_SIGNING_SECRET || process.env.EMAIL_INBOUND_SECRET
       ? 'signed'
