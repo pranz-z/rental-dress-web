@@ -13,9 +13,24 @@ next-env.d.ts
 # local email outbox (dev) — written by the app when no email key is set
 var/
 
-# env
+# env — never commit real values; .env.example is the committed template
 .env
-.env.local
+.env.*
+!.env.example
+
+# local data directories, database dumps and server logs
+.data/
+*.dump
+*.sql.gz
+*.log
+
+# secrets that are sometimes dropped into a repo by mistake
+*.pem
+*.key
+*.p12
+
+# vercel
+.vercel
 
 # misc
 .DS_Store
