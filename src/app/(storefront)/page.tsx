@@ -5,9 +5,9 @@ import { prisma } from '@/lib/db'
 import { formatMoney } from '@/lib/money'
 import { currentCustomer } from '@/lib/storefront/session'
 import { facetsFor, featuredDresses, loadCatalog, trendingDresses, shopHref } from '@/lib/storefront/catalog'
-import { DateSearch } from '@/components/storefront/date-search'
 import { DressCard } from '@/components/storefront/dress-card'
 import { GarmentImage } from '@/components/storefront/garment'
+import { HomeHero } from '@/components/storefront/home-hero'
 import { NewsletterForm } from '@/components/storefront/newsletter-form'
 import { Rail } from '@/components/storefront/rail'
 
@@ -57,46 +57,14 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* hero */}
-      <section className="relative overflow-hidden border-b border-line">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(85% 90% at 82% 10%, var(--color-blush) 0%, rgba(243,225,225,0) 55%), radial-gradient(70% 80% at 12% 90%, var(--color-cream) 0%, rgba(246,240,236,0) 60%)',
-          }}
-        />
-        <div className="relative mx-auto w-full max-w-[1200px] px-4 pt-16 pb-14 sm:px-6 sm:pt-24 sm:pb-20 lg:px-8">
-          <div className="max-w-3xl">
-            <p className="text-[11px] font-bold tracking-[0.24em] text-gold-ink uppercase">Designer dress rental · Boston</p>
-            <h1 className="mt-4 font-serif text-[46px] leading-[1.04] text-ink sm:text-[72px]">Wear something unforgettable.</h1>
-            <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-muted">
-              The Valentina, the Aurelia, the dress you have been picturing — reserved for your date, delivered pressed to your door, and
-              returned with a label we have already paid for.
-            </p>
-            <div className="mt-8">
-              <a
-                href="#find-your-date"
-                className="inline-flex h-13 items-center gap-2.5 rounded-full bg-accent px-8 text-[15px] font-bold tracking-wide text-accent-ink shadow-lift transition-colors hover:bg-accent-hover"
-              >
-                Find your dress
-                <ArrowRight className="size-4.5" strokeWidth={2} aria-hidden />
-              </a>
-            </div>
-          </div>
-
-          <div id="find-your-date" className="mt-12 max-w-4xl scroll-mt-24">
-            <DateSearch occasions={facets.occasions.map((entry) => entry.value)} sizes={facets.sizes} />
-            <p className="mt-2.5 text-xs leading-relaxed text-ink-muted">
-              The calendar knows what is free — searched against every held reservation, prep and cleaning day.
-            </p>
-          </div>
-        </div>
-      </section>
+      <HomeHero occasions={facets.occasions.map((entry) => entry.value)} sizes={facets.sizes} />
 
       {/* shop by occasion */}
-      <section aria-labelledby="occasions" className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8">
+      <section
+        id="dress-for-the-invitation"
+        aria-labelledby="occasions"
+        className="mx-auto w-full max-w-[1200px] scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8"
+      >
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold tracking-[0.2em] text-gold-ink uppercase">Where are you going?</p>

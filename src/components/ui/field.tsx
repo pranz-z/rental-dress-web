@@ -34,14 +34,14 @@ export function Textarea({ className, ...rest }: ComponentProps<'textarea'>) {
   return <textarea className={cn(fieldBase, 'min-h-28 px-3.5 py-3 leading-relaxed', className)} {...rest} />
 }
 
-export function Select({ className, children, ...rest }: ComponentProps<'select'>) {
+export function Select({ className, iconClassName, children, ...rest }: ComponentProps<'select'> & { iconClassName?: string }) {
   return (
     <span className="relative block">
       <select className={cn(fieldBase, 'h-11 appearance-none pr-10 pl-3.5', className)} {...rest}>
         {children}
       </select>
       <ChevronDown
-        className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-ink-muted"
+        className={cn('pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-ink-muted', iconClassName)}
         strokeWidth={1.75}
         aria-hidden
       />

@@ -43,8 +43,11 @@ const nextConfig: NextConfig = {
   },
   typedRoutes: false,
   images: {
-    // Every garment image is drawn as local SVG art, so no remote hosts are needed.
-    unoptimized: true,
+    // The hero photograph is the one raster image on the storefront; the rest
+    // of the catalogue is drawn as local SVG art. Optimisation stays on so
+    // next/image can serve correctly sized variants, and quality 80 is
+    // allowed alongside the default 75.
+    qualities: [75, 80],
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]

@@ -223,6 +223,247 @@
   }
 }
 
+/* ── home hero ───────────────────────────────────────────────────── */
+/* The storefront's opening scene. Layers are pure CSS/SVG; the only
+   client JavaScript is a sliver (hero-motion.tsx) for the mouse parallax,
+   the rotating occasion line and pausing everything while the tab is
+   hidden or the scene is off screen. Every animation below moves
+   transform/opacity only, and yields entirely to prefers-reduced-motion —
+   the scene then renders its final state. */
+
+.home-hero {
+  /* the one near-black the scene opens from and sits on */
+  --hero-night: #171211;
+  --hero-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* intro delays, desktop */
+  --hero-eye-d: 0.22s;
+  --hero-h1a-d: 0.42s;
+  --hero-h1b-d: 0.68s;
+  --hero-rot-d: 1.12s;
+  --hero-rule-d: 0.98s;
+  --hero-sub-d: 1.32s;
+  --hero-cta-d: 1.6s;
+  --hero-card-d: 1.84s;
+  --hero-in-dur: 0.85s;
+}
+
+/* on the dark scene the global mulberry focus ring disappears — keep it ivory */
+.home-hero :focus-visible {
+  outline-color: #fbf7f4;
+}
+
+@keyframes hero-kb {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-0.6%, -1.2%, 0);
+  }
+}
+
+@keyframes hero-shimmer {
+  from {
+    opacity: 0.28;
+  }
+  to {
+    opacity: 0.62;
+  }
+}
+
+@keyframes hero-mote {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(var(--mote-x, 10px), var(--mote-y, -18px), 0) rotate(var(--mote-rot, 22deg));
+  }
+}
+
+@keyframes hero-grain {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-4%, 3%, 0);
+  }
+}
+
+@keyframes hero-veil {
+  from {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes hero-card-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hero-rule {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes hero-cue {
+  0% {
+    transform: translateY(-120%);
+  }
+  55% {
+    transform: translateY(30%);
+  }
+  100% {
+    transform: translateY(250%);
+  }
+}
+
+.hero-kb {
+  animation: hero-kb 27s ease-in-out infinite alternate;
+}
+.hero-shimmer {
+  opacity: 0.5;
+  animation: hero-shimmer 8.5s ease-in-out infinite alternate;
+}
+.hero-mote {
+  animation: hero-mote var(--mote-t, 26s) ease-in-out var(--mote-delay, 0s) infinite alternate;
+}
+.hero-grain {
+  animation: hero-grain 1.1s steps(2, end) infinite;
+  background-image: url("data:image/png;base64,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");
+  background-size: 64px 64px;
+  opacity: 0.15;
+}
+
+/* parallax: the sliver of client JS only nudges these custom properties */
+.hero-layer {
+  transform: translate3d(
+    calc(var(--hpx, 0) * var(--mx, 0px)),
+    calc(var(--hpy, 0) * var(--my, 0px) + var(--hsy, 0) * var(--sy, 0) * 1px),
+    0
+  );
+  will-change: transform;
+}
+
+.hero-reveal {
+  animation: hero-rise var(--hero-in-dur) var(--hero-ease) var(--hero-d, 0s) both;
+}
+.hero-reveal--card {
+  animation: hero-card-rise 0.95s var(--hero-ease) var(--hero-card-d) both;
+}
+.hero-rule {
+  animation: hero-rule 0.9s var(--hero-ease) var(--hero-rule-d) both;
+  transform-origin: center;
+}
+.hero-veil {
+  opacity: 0;
+  animation: hero-veil 1.05s ease-out var(--hero-veil-d, 0s) both;
+}
+.hero-rotate {
+  transition:
+    opacity 0.5s var(--hero-ease),
+    transform 0.5s var(--hero-ease);
+}
+.hero-rotate.is-out {
+  opacity: 0;
+  transform: translateY(0.4em);
+}
+.hero-cue-dot {
+  animation: hero-cue 2.4s ease-in-out infinite;
+}
+
+.hero-d-eye {
+  --hero-d: var(--hero-eye-d);
+}
+.hero-d-1 {
+  --hero-d: var(--hero-h1a-d);
+}
+.hero-d-2 {
+  --hero-d: var(--hero-h1b-d);
+}
+.hero-d-rot {
+  --hero-d: var(--hero-rot-d);
+}
+.hero-d-sub {
+  --hero-d: var(--hero-sub-d);
+}
+.hero-d-cta {
+  --hero-d: var(--hero-cta-d);
+}
+
+/* On the photograph the light copy keeps a soft pool of shade under its own
+   glyphs — the lower-third trick — so a highlight in the gown can never
+   swallow a word. The shadow stays wide and soft, never an outline. */
+.hero-copy-shadow {
+  text-shadow:
+    0 1px 14px rgba(15, 11, 10, 0.85),
+    0 0 5px rgba(15, 11, 10, 0.6);
+}
+.hero-copy-shadow-lg {
+  text-shadow:
+    0 2px 28px rgba(15, 11, 10, 0.8),
+    0 0 8px rgba(15, 11, 10, 0.5);
+}
+
+/* tab hidden or scene off screen: everything holds its breath */
+.home-hero[data-hero-paused] * {
+  animation-play-state: paused !important;
+}
+
+/* shorter intro on phones */
+@media (max-width: 767px) {
+  .home-hero {
+    --hero-eye-d: 0.08s;
+    --hero-h1a-d: 0.16s;
+    --hero-h1b-d: 0.34s;
+    --hero-rot-d: 0.66s;
+    --hero-rule-d: 0.52s;
+    --hero-sub-d: 0.82s;
+    --hero-cta-d: 1.02s;
+    --hero-card-d: 1.14s;
+    --hero-in-dur: 0.6s;
+  }
+}
+
+/* reduced motion: no veil, no push-in, no parallax — just the scene */
+@media (prefers-reduced-motion: reduce) {
+  .home-hero *,
+  .home-hero *::before,
+  .home-hero *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-veil {
+    display: none;
+  }
+  .hero-layer {
+    transform: none;
+  }
+}
+
 /* ── printing ────────────────────────────────────────────────────── */
 
 /* The daily run sheet is the one screen that leaves the building. On paper it
