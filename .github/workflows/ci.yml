@@ -1,0 +1,62 @@
+name: CI
+
+# Order matters: the tracked-file guard runs before anything is installed so a
+# leaked secret stops the run in seconds; tests come before the build because
+# the database rules (overlap protection, role gates) are what the studio
+# really depends on, and the build is the slowest step.
+#
+# Nothing is seeded in CI: migrations create an empty studio, the test suite
+# builds its own fixtures (zztest-marked), and the build only logs a
+# `studioSettings` notice while generating empty-database pages.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: maison_reve_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/maison_reve_ci
+      AUTH_SECRET: ci-only-session-secret-never-used-in-production
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      STUDIO_TIMEZONE: America/New_York
+      PG_POOL_MAX: '10'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm run check:tracked
+
+      - run: npm ci
+
+      - run: npx prisma migrate deploy
+
+      - run: npm test
+
+      - run: npm run typecheck
+
+      - run: npm run build
