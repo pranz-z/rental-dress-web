@@ -1,14 +1,26 @@
 /**
- * Maison Rêve — studio seed.
+ * Maison Rêve — demo studio seed (DEMO_DATA).
  *
  * Loads the wardrobe, customers, team, bookings, inquiries and payment ledger
- * the studio works from, extended with three months of history so every screen
- * (and the utilization and reply-time figures) reads as a live business.
+ * the demo studio works from, extended with three months of history so every
+ * screen (and the utilization and reply-time figures) reads as a live business.
  *
- * Run: npm run db:seed   ·   rebuild from scratch: npm run db:reseed
+ * Guarded by DEMO_DATA=1 so it can never run against a real studio database by
+ * accident, and every demo account's password comes from the environment —
+ * nothing sign-in-able is committed to this repository:
+ *
+ *   DEMO_STAFF_PASSWORD     — at least 12 characters, signs in every demo staff member
+ *   DEMO_CUSTOMER_PASSWORD  — at least 12 characters, signs in the demo customers with accounts
+ *
+ * Run: npm run db:seed   ·   against a fresh database: npm run db:setup
  *
  * All records are fictional. Amounts are in cents.
  */
+// The demo contract is evaluated before everything else — including
+// @prisma/client, which loads the repository's .env as an import side effect.
+// Running the guard first means only the real process environment can satisfy
+// it; a stray .env can only make it refuse (see seed-contract.ts).
+import { customerPassword, staffPassword } from './seed-contract'
 import bcrypt from 'bcryptjs'
 import { PrismaClient, type BookingStatus, type PaymentStatus } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
@@ -18,17 +30,6 @@ import { occupancyWindow, rentalsReleased } from '../src/lib/availability'
 import { averageFirstReplyMinutes, revenueForRange, revenueThisMonth, utilizationPercent } from '../src/lib/metrics'
 import { formatMoney } from '../src/lib/money'
 import { depositFor, rentalPriceFor } from '../src/lib/pricing'
-
-try {
-  process.loadEnvFile('.env.local')
-} catch {
-  /* .env.local is optional */
-}
-try {
-  process.loadEnvFile('.env')
-} catch {
-  /* .env is optional */
-}
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) })
 
@@ -786,7 +787,7 @@ async function main() {
       data: {
         name: member.name,
         email: member.email,
-        passwordHash: await bcrypt.hash(member.password, 10),
+        passwordHash: await bcrypt.hash(staffPassword, 10),
         role: member.role,
         title: member.title,
         phone: member.phone,
@@ -995,7 +996,7 @@ async function main() {
         email: seed.email,
         phone: seed.phone,
         tier: seed.tier,
-        passwordHash: seed.account ? await bcrypt.hash(seed.account.password, 10) : null,
+        passwordHash: seed.account ? await bcrypt.hash(customerPassword, 10) : null,
         lifetimeSpend: seed.lifetimeSpend,
         rentalsCount: seed.rentalsCount,
         addressLine1: seed.addressLine1,

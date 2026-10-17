@@ -384,7 +384,8 @@ export type CustomerSeed = {
     shoeSize?: string
     notes?: string
   }
-  account?: { password: string }
+  /** Has a storefront sign-in; the password comes from DEMO_CUSTOMER_PASSWORD at seed time. */
+  account?: boolean
 }
 
 export const CUSTOMERS: CustomerSeed[] = [
@@ -411,7 +412,7 @@ export const CUSTOMERS: CustomerSeed[] = [
       shoeSize: '39',
       notes: 'Normally needs 2cm taken off the hem for a floor-length gown.',
     },
-    account: { password: 'Elena2026!' },
+    account: true,
   },
   {
     name: 'Priya Nair',
@@ -482,7 +483,7 @@ export const CUSTOMERS: CustomerSeed[] = [
       shoeSize: '40',
       notes: 'Prefers a longer 8-day rental when travelling.',
     },
-    account: { password: 'Camille2026!' },
+    account: true,
   },
   {
     name: 'Grace Tan',
@@ -885,11 +886,10 @@ export type StaffSeed = {
   title: string
   phone: string
   accentTone: string
-  password: string
   twoFactor?: boolean
 }
 
-/** Shared password for every seeded staff account is documented in the README. */
+/** Every seeded staff account signs in with DEMO_STAFF_PASSWORD (never a literal in this repo). */
 export const STAFF: StaffSeed[] = [
   {
     name: 'Isabelle Marchand',
@@ -898,7 +898,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Founder & owner',
     phone: '(617) 555-0100',
     accentTone: 'gold',
-    password: 'Maison2026!',
   },
   {
     name: 'Nadia Beaumont',
@@ -907,7 +906,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Studio manager',
     phone: '(617) 555-0102',
     accentTone: 'mulberry',
-    password: 'Maison2026!',
   },
   {
     name: 'Claire Fontaine',
@@ -916,7 +914,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Lead stylist',
     phone: '(617) 555-0104',
     accentTone: 'rose',
-    password: 'Maison2026!',
   },
   {
     name: 'Yuki Tanaka',
@@ -925,7 +922,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Stylist & fit specialist',
     phone: '(617) 555-0105',
     accentTone: 'blush',
-    password: 'Maison2026!',
   },
   {
     name: 'Marcus Oyelaran',
@@ -934,7 +930,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Fulfillment lead',
     phone: '(617) 555-0106',
     accentTone: 'sage',
-    password: 'Maison2026!',
   },
   {
     name: 'Tomas Alvarez',
@@ -943,7 +938,6 @@ export const STAFF: StaffSeed[] = [
     title: 'Returns & garment care',
     phone: '(617) 555-0107',
     accentTone: 'clay',
-    password: 'Maison2026!',
   },
 ]
 
