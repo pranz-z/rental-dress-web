@@ -35,3 +35,7 @@ var/
 # misc
 .DS_Store
 npm-debug.log*
+
+# Neon / agent skills (local tooling)
+.agents/
+skills-lock.json
